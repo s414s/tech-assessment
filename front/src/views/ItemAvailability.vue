@@ -6,7 +6,7 @@ import ItemTypeSelect from '@/components/ItemTypeSelect.vue';
 import LocationSelect from '@/components/LocationSelect.vue';
 import { GET } from '@/helpers/apiClient';
 import { firstBookableDate } from '@/helpers/dateHelpers';
-import type { Booking, GetFilteredItemsResponse, GetItemBookingsResponse, ItemDto } from '@/types/responseTypes';
+import type { GetFilteredItemsResponse, ItemDto } from '@/types/responseTypes';
 import { computed, ref, watch } from 'vue'
 
 const PAGE_SIZE = 5
@@ -20,7 +20,6 @@ const filtersSelected = computed(() => itemType.value !== null && locationId.val
 const page = ref(1)
 const totalPages = ref(0)
 const items = ref<ItemDto[]>([])
-const bookingsByItem = ref<Record<number, Booking[]>>({})
 const loading = ref(false)
 const error = ref('')
 
@@ -28,7 +27,8 @@ const bookingDialogOpen = ref(false)
 const itemToBook = ref<ItemDto | null>(null)
 const bookingCreated = ref(false)
 
-function openBookingDialog(item: ItemDto) {
+// Without an item the dialog lets the user pick location and item
+function openBookingDialog(item: ItemDto | null) {
   itemToBook.value = item
   bookingDialogOpen.value = true
 }
@@ -38,30 +38,11 @@ function onBookingCreated() {
   fetchItems()
 }
 
-async function fetchItemBookings(item: ItemDto): Promise<Booking[]> {
-  const params = new URLSearchParams({ from: `${date.value}T00:00:00`, to: `${date.value}T23:59:59` })
-  try {
-    const response: GetItemBookingsResponse = await GET(`api/bookings/item/${item.id}?${params}`)
-    return response.bookings.map((booking, index) => ({
-      id: index,
-      locationId: item.locationId,
-      locationName: item.locationName,
-      itemType: item.name,
-      userId: booking.userId,
-      from: new Date(booking.from),
-      to: new Date(booking.to),
-    }))
-  } catch (e) {
-    console.error(e)
-    return []
-  }
-}
-
+// Only items with at least one free slot that day are returned, each with that day's bookings
 async function fetchItems() {
   if (!filtersSelected.value) {
     items.value = []
     totalPages.value = 0
-    bookingsByItem.value = {}
     return
   }
 
@@ -76,9 +57,6 @@ async function fetchItems() {
     const response: GetFilteredItemsResponse = await GET(`api/items?${params}`)
     items.value = response.items.items
     totalPages.value = response.items.totalPages
-
-    const bookings = await Promise.all(items.value.map(fetchItemBookings))
-    bookingsByItem.value = Object.fromEntries(items.value.map((item, i) => [item.id, bookings[i] ?? []]))
   } catch {
     error.value = 'Could not load items'
     items.value = []
@@ -100,7 +78,10 @@ fetchItems()
 
 <template>
   <main>
-    <p>Bookings</p>
+    <div class="d-flex align-center justify-space-between mb-4">
+      <p>Bookings</p>
+      <v-btn color="primary" variant="flat" @click="openBookingDialog(null)">Book</v-btn>
+    </div>
 
     <v-row>
       <v-col cols="12" md="4">
@@ -135,9 +116,9 @@ fetchItems()
         <v-card-text>
           <ItemBookings
             :date="date"
-            start-time="08:00"
-            end-time="18:00"
-            :bookings="bookingsByItem[item.id] ?? []"
+            :start-time="item.openingTime"
+            :end-time="item.closingTime"
+            :bookings="item.bookings"
           />
         </v-card-text>
       </v-card>

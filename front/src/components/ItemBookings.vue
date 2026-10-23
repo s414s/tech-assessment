@@ -1,7 +1,7 @@
 
 <script setup lang="ts">
 import { formatTime, toDate, toMinutes } from '@/helpers/dateHelpers';
-import type { Booking } from '@/types/responseTypes';
+import type { ItemBookingDto } from '@/types/responseTypes';
 import { computed, onUnmounted, ref } from 'vue'
 
 interface TimeSlot {
@@ -14,9 +14,9 @@ interface TimeSlot {
 
 const props = withDefaults(defineProps<{
   date: string // YYYY-MM-DD
-  startTime: string // HH:mm
-  endTime: string // HH:mm
-  bookings?: Booking[]
+  startTime: string // HH:mm or HH:mm:ss
+  endTime: string // HH:mm or HH:mm:ss
+  bookings?: ItemBookingDto[]
 }>(), {
   bookings: () => [],
 })

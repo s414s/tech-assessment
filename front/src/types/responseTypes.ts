@@ -74,6 +74,15 @@ export interface ItemDto {
     type: number; // ItemType enum value, matches ItemType.id from api/items/types
     locationId: number;
     locationName: string;
+    openingTime: string; // HH:mm:ss, location opening time
+    closingTime: string; // HH:mm:ss, location closing time
+    bookings: ItemBookingDto[]; // That day's bookings when filtering by availableOnDate, empty otherwise
+}
+
+export interface ItemBookingDto {
+    from: string; // ISO 8601 date-time
+    to: string;
+    userId: number;
 }
 
 // GET api/bookings/item/{itemId}
