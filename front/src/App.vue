@@ -2,16 +2,25 @@
 import { RouterView } from 'vue-router';
 
 import Header from './components/Header.vue';
+import { toasts } from './helpers/toast';
 </script>
 
 <template>
-    <div class="main-container">
-        <Header />
-        <main class="content">
-            <RouterView />
-        </main>
-        <Footer />
-    </div>
+    <v-app>
+        <div class="main-container">
+            <Header />
+            <main class="content">
+                <RouterView />
+            </main>
+            <Footer />
+        </div>
+        <v-snackbar-queue
+            v-model="toasts"
+            location="bottom end"
+            timeout="6000"
+            closable
+        />
+    </v-app>
 </template>
 
 <style scoped>

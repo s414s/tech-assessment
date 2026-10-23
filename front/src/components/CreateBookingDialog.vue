@@ -16,6 +16,8 @@ const emit = defineEmits<{
 
 const open = defineModel<boolean>({ default: false })
 
+const today = new Date().toLocaleDateString('en-CA')
+
 const userId = ref<number | null>(null)
 const date = ref(props.date)
 const from = ref('09:00')
@@ -75,7 +77,7 @@ async function submit() {
         </v-alert>
 
         <UserSelect v-model="userId" />
-        <DateSelect v-model="date" />
+        <DateSelect v-model="date" :min="today" />
 
         <div class="time-fields">
           <v-text-field v-model="from" type="time" label="From" step="900" />

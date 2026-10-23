@@ -1,14 +1,15 @@
 
 <script setup lang="ts">
-import { customFormatTime, toDate, toMinutes } from '@/helpers/dateHelpers';
+import { formatTime, toDate, toMinutes } from '@/helpers/dateHelpers';
 import type { Booking } from '@/types/responseTypes';
-import { computed, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 
 interface TimeSlot {
   start: number
   end: number
   label: string
   occupied: boolean
+  past: boolean
 }
 
 const props = withDefaults(defineProps<{
@@ -21,6 +22,11 @@ const props = withDefaults(defineProps<{
 })
 
 const STEP = 15
+
+// Refreshed every minute so slots turn unavailable as time passes
+const now = ref(new Date())
+const timer = setInterval(() => (now.value = new Date()), 60_000)
+onUnmounted(() => clearInterval(timer))
 
 const slots = computed<TimeSlot[]>(() => {
   const start = toMinutes(props.startTime)
@@ -44,8 +50,10 @@ const slots = computed<TimeSlot[]>(() => {
     result.push({
       start: minute,
       end: minute + STEP,
-      label: customFormatTime(minute),
+      label: formatTime(minute),
       occupied,
+      // Bookings can only start from the next slot, so a slot already started is gone too
+      past: slotStart < now.value,
     })
   }
 
@@ -59,14 +67,14 @@ const slots = computed<TimeSlot[]>(() => {
       v-for="slot in slots"
       :key="slot.start"
       class="slot"
-      :class="{ occupied: slot.occupied }"
+      :class="{ occupied: slot.occupied, past: slot.past && !slot.occupied }"
     >
       <span class="slot-time">
         {{ slot.label }}
       </span>
 
       <span class="slot-status">
-        {{ slot.occupied ? 'Occupied' : 'Available' }}
+        {{ slot.occupied ? 'Occupied' : slot.past ? 'Not available' : 'Available' }}
       </span>
     </div>
   </div>
@@ -96,6 +104,12 @@ const slots = computed<TimeSlot[]>(() => {
   background: #fee2e2;
   border-color: #fca5a5;
   color: #b91c1c;
+}
+
+.slot.past {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  color: #6b7280;
 }
 
 .slot-time {

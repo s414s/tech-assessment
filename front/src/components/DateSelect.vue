@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { formatDate } from '@/helpers/dateHelpers'
+import { formatDate, isWeekend } from '@/helpers/dateHelpers'
 import { computed, ref } from 'vue'
 
 // YYYY-MM-DD
 const model = defineModel<string>({ required: true })
+
+defineProps<{
+  min?: string // YYYY-MM-DD, earliest selectable date
+}>()
 
 const menu = ref(false)
 
@@ -14,6 +18,12 @@ const pickerDate = computed<Date>({
     menu.value = false
   },
 })
+
+// Vuetify passes the picker's own date value; a plain YYYY-MM-DD string is read as local noon
+function isAllowed(value: unknown): boolean {
+  const date = typeof value === 'string' ? new Date(`${value}T12:00:00`) : new Date(value as Date)
+  return !isWeekend(date)
+}
 </script>
 
 <template>
@@ -30,6 +40,6 @@ const pickerDate = computed<Date>({
       />
     </template>
 
-    <v-date-picker v-model="pickerDate" />
+    <v-date-picker v-model="pickerDate" :min="min" :allowed-dates="isAllowed" />
   </v-menu>
 </template>

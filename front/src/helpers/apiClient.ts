@@ -1,4 +1,5 @@
 import { apiBaseUrl } from "@/helpers/config";
+import { showError } from "@/helpers/toast";
 import type { ProblemDetails } from "@/types/responseTypes";
 type QueryParams = { [key: string]: string | number | boolean; };
 type BodyParams = { [key: string]: any; };
@@ -17,58 +18,56 @@ export class ApiError extends Error {
     }
 }
 
-// Non-500 errors carry a ProblemDetails body with a user-facing title (e.g. a DomainException message)
+// Non-500 errors carry a ProblemDetails body with a user-facing title (e.g. a DomainException message).
+// Every failed request also raises an error toast.
 async function toApiError(res: Response, url: string): Promise<ApiError> {
     if (res.status !== 500) {
         try {
             const problem: ProblemDetails = await res.json();
+
+            showError(problem.detail ? `${problem.title}: ${problem.detail}` : problem.title);
+
             return new ApiError(res.status, problem.title, problem);
         } catch {
             // Body was empty or not JSON; fall through to the generic error
         }
     }
+    showError(`Request failed (${res.status} ${res.statusText})`);
     return new ApiError(res.status, `Failed to fetch ${url}: ${res.statusText}`);
 }
 
-export async function GET(url: string) {
-    const requestOptions = {
-        method: 'GET',
+// Shared by every method so all requests and responses are logged to the console
+async function request(method: string, url: string, body?: BodyParams) {
+    const requestOptions: RequestInit = {
+        method,
         headers: {
             'Content-Type': 'application/json',
         },
+        body: body === undefined ? undefined : JSON.stringify(body),
     };
+
+    console.log(`[API] → ${method} ${url}`, body ?? '');
+
     const res = await fetch(baseUrl + url, requestOptions);
     if (!res.ok) {
-        throw await toApiError(res, url);
+        const error = await toApiError(res, url);
+        console.error(`[API] ← ${res.status} ${method} ${url}`, error.problem ?? error.message);
+        throw error;
     }
-    return await res.json();
+
+    const data = await res.json();
+    console.log(`[API] ← ${res.status} ${method} ${url}`, data);
+    return data;
+}
+
+export async function GET(url: string) {
+    return request('GET', url);
 }
 
 export async function POST(url: string, body: BodyParams) {
-    const requestOptions = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-    };
-    const res = await fetch(baseUrl + url, requestOptions);
-    if (!res.ok) {
-        throw await toApiError(res, url);
-    }
-    return await res.json();
+    return request('POST', url, body);
 }
 
 export async function DELETE(url: string, body?: string) {
-    const requestOptions = {
-        method: 'DELETE',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-    };
-    const res = await fetch(baseUrl + url, requestOptions);
-    if (!res.ok) {
-        throw await toApiError(res, url);
-    }
-    return await res.json();
+    return request('DELETE', url);
 }

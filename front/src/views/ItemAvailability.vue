@@ -5,6 +5,7 @@ import ItemBookings from '@/components/ItemBookings.vue';
 import ItemTypeSelect from '@/components/ItemTypeSelect.vue';
 import LocationSelect from '@/components/LocationSelect.vue';
 import { GET } from '@/helpers/apiClient';
+import { firstBookableDate } from '@/helpers/dateHelpers';
 import type { Booking, GetFilteredItemsResponse, GetItemBookingsResponse, ItemDto } from '@/types/responseTypes';
 import { computed, ref, watch } from 'vue'
 
@@ -12,7 +13,8 @@ const PAGE_SIZE = 5
 
 const itemType = ref<number | null>(null)
 const locationId = ref<number | null>(null)
-const date = ref(new Date().toLocaleDateString('en-CA'))
+const today = new Date().toLocaleDateString('en-CA')
+const date = ref(firstBookableDate())
 const filtersSelected = computed(() => itemType.value !== null && locationId.value !== null && !!date.value)
 
 const page = ref(1)
@@ -108,7 +110,7 @@ fetchItems()
         <LocationSelect v-model="locationId" />
       </v-col>
       <v-col cols="12" md="4">
-        <DateSelect v-model="date" />
+        <DateSelect v-model="date" :min="today" />
       </v-col>
     </v-row>
 
@@ -120,25 +122,26 @@ fetchItems()
     </p>
 
     <p v-else-if="!loading && !error && !items.length" class="text-center text-medium-emphasis pa-6">
-      No items match the selected filters.
+      No items found
     </p>
 
-    <v-card v-for="item in items" :key="item.id" class="mb-4" variant="outlined">
-      <v-card-title>{{ item.name }}</v-card-title>
-      <v-card-subtitle>{{ item.locationName }}</v-card-subtitle>
-      <v-card-text>
-        <ItemBookings
-          :date="date"
-          start-time="08:00"
-          end-time="18:00"
-          :bookings="bookingsByItem[item.id] ?? []"
-        />
-      </v-card-text>
-      <v-card-actions>
-        <v-spacer />
-        <v-btn color="primary" variant="flat" @click="openBookingDialog(item)">Book</v-btn>
-      </v-card-actions>
-    </v-card>
+    <template v-else>
+      <v-card v-for="item in items" :key="item.id" class="mb-4" variant="outlined">
+        <v-card-title>{{ item.name }}</v-card-title>
+        <v-card-subtitle>{{ item.locationName }}</v-card-subtitle>
+        <v-card-actions>
+          <v-btn color="primary" variant="flat" @click="openBookingDialog(item)">Book</v-btn>
+        </v-card-actions>
+        <v-card-text>
+          <ItemBookings
+            :date="date"
+            start-time="08:00"
+            end-time="18:00"
+            :bookings="bookingsByItem[item.id] ?? []"
+          />
+        </v-card-text>
+      </v-card>
+    </template>
 
     <v-pagination
       v-if="totalPages > 1"
