@@ -6,7 +6,8 @@
     <v-container>
         <nav class="header-container">
             <RouterLink to="/">Resources</RouterLink>
-            <RouterLink to="/myBookings">MyBookings</RouterLink>
+            <RouterLink to="/availability">Available</RouterLink>
+            <RouterLink to="/userBookings">User Bookings</RouterLink>
         </nav>
     </v-container>
 </template>

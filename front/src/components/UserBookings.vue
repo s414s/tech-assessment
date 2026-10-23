@@ -1,87 +1,63 @@
 <script setup lang="ts">
 import { formatDate } from '@/helpers/dateHelpers'
 import type { UserBooking } from '@/types/responseTypes'
-import { computed } from 'vue'
 
-const props = defineProps<{
+defineProps<{
   bookings: UserBooking[]
 }>()
-
-const groupedBookings = computed<Record<string, UserBooking[]>>(() => {
-  const groups: Record<string, UserBooking[]> = {}
-
-  for (const booking of props.bookings) {
-    const date = new Date(booking.from).toLocaleDateString('en-CA')
-
-    if (!groups[date]) {
-      groups[date] = []
-    }
-
-    groups[date].push(booking)
-  }
-
-  return groups
-})
 </script>
 
 <template>
   <div class="user-bookings">
-    <div v-if="!bookings.length" class="text-center pa-6">
+    <div v-if="!bookings.length" class="empty-state">
       <v-icon
         icon="mdi-calendar-blank"
         size="48"
         color="grey"
       />
-      <p class="mt-3 text-medium-emphasis">
+      <p class="empty-message">
         You have no bookings.
       </p>
     </div>
 
-    <div
-      v-for="(dayBookings, date) in groupedBookings"
-      :key="date"
-      class="mb-6"
+    <v-card
+      v-for="booking in bookings"
+      :key="booking.id"
+      class="booking-card"
+      variant="outlined"
     >
-      <h3 class="mb-3 text-capitalize">
-        {{ formatDate(String(date)) }}
-      </h3>
-
-      <v-card
-        v-for="booking in dayBookings"
-        :key="booking.id"
-        class="mb-2 booking-card"
-        variant="outlined"
-      >
-        <v-card-text class="d-flex align-center ga-4">
-          <div class="time-column">
-            <div class="font-weight-bold">
-                From:
-                {{ booking.from.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }}
-            </div>
-            <div class="text-medium-emphasis">
-                To:
-              {{ booking.to.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }}
-            </div>
+      <v-card-text class="booking-content">
+        <div class="time-column">
+          <div class="booking-date">
+            {{ formatDate(booking.from.toLocaleDateString('en-CA')) }}
           </div>
-
-          <v-divider vertical />
-
-          <div class="flex-grow-1">
-            <div class="font-weight-medium">
-              {{ booking.locationName }}
-            </div>
-            <div class="text-caption text-medium-emphasis">
-              {{ booking.itemType }}
-            </div>
+          <div class="booking-from">
+            From:
+            {{ booking.from.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }}
           </div>
+          <div class="secondary-text">
+            To:
+            {{ booking.to.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' }) }}
+          </div>
+        </div>
 
-          <v-icon
-            icon="mdi-calendar-check"
-            color="primary"
-          />
-        </v-card-text>
-      </v-card>
-    </div>
+        <v-divider vertical />
+
+        <div class="booking-details">
+          <div class="location-name">
+            {{ booking.locationName }}
+          </div>
+          <div class="item-type secondary-text">
+            {{ booking.itemType }}
+          </div>
+        </div>
+
+        <v-icon
+          icon="mdi-calendar-check"
+          color="primary"
+        />
+      </v-card-text>
+    </v-card>
   </div>
 </template>
 
@@ -90,13 +66,55 @@ const groupedBookings = computed<Record<string, UserBooking[]>>(() => {
   width: 100%;
 }
 
+.empty-state {
+  padding: 24px;
+  text-align: center;
+}
+
+.empty-message {
+  margin-top: 12px;
+  opacity: 0.7;
+}
+
 .booking-card {
+  margin-bottom: 8px;
   border-radius: 8px;
   border-left: 4px solid rgb(var(--v-theme-primary));
+}
+
+.booking-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
 .time-column {
   min-width: 52px;
   font-size: 14px;
+}
+
+.booking-date {
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.booking-from {
+  font-weight: 700;
+}
+
+.booking-details {
+  flex-grow: 1;
+}
+
+.location-name {
+  font-weight: 500;
+}
+
+.item-type {
+  font-size: 12px;
+}
+
+.secondary-text {
+  opacity: 0.7;
 }
 </style>

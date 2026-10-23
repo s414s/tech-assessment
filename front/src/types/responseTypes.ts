@@ -1,5 +1,3 @@
-import type { VDataTable } from "vuetify/components/VDataTable";
-
 export interface UserInfo {
     id: number,
     name: string,
@@ -45,6 +43,11 @@ export interface Location {
     name: string;
 }
 
+export interface User {
+    id: number;
+    name: string;
+}
+
 export interface ItemType {
     id: number;
     name: string;
@@ -84,21 +87,30 @@ export interface BookingDto {
     userId: number;
 }
 
-// GET api/bookings/all
+// GET api/bookings/user/{userId}?page=&limit=
 export interface GetUsersBookingsResponse {
-    bookings: BookingInfoDto[];
+    bookings: PaginatedList<BookingInfoDto>;
 }
 
 export interface BookingInfoDto {
+    id: number;
     from: string; // ISO 8601 date-time
     to: string;
     locationId: number;
     locationName: string;
+    itemName: string;
 }
 
-// POST api/bookings
 export interface CreateBookingResponse {
     id: number;
 }
 
-export type ReadonlyHeaders = VDataTable['$props']['headers'];
+// Error body written by BookingSystem.Presentation.Middlewares.GlobalExceptionHandler (RFC 7807)
+export interface ProblemDetails {
+    type: string;
+    title: string;
+    status: number;
+    detail: string;
+    instance: string;
+    traceId?: string; // ProblemDetails.Extensions are serialized as top-level properties
+}

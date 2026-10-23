@@ -1,4 +1,5 @@
-import ItemBookingsView from '@/views/ItemBookingsView.vue';
+import ItemAvailability from '@/views/ItemAvailability.vue';
+import ItemsView from '@/views/ItemsView.vue';
 import UserBookingsView from '@/views/UserBookingsView.vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
@@ -7,12 +8,17 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'bookings',
-      component: ItemBookingsView,
+      name: 'items',
+      component: ItemsView,
     },
     {
-      path: '/mybookings',
-      name: 'mybookings',
+      path: '/availability',
+      name: 'availability',
+      component: ItemAvailability,
+    },
+    {
+      path: '/userBookings',
+      name: 'userBookings',
       component: UserBookingsView,
     },
   ],
