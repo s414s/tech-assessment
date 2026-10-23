@@ -18,10 +18,87 @@ export interface LoginInfo {
 
 export interface Booking {
     id: number;
-    location: number;
+    locationId: number;
+    locationName: string;
+    userId: number;
     from: Date;  // Assuming 'from' and 'until' are represented as strings in ISO 8601 format (e.g., "YYYY-MM-DD")
     to: Date;
     itemType: string;
+}
+
+export interface UserBooking {
+    id: number;
+    locationId: number;
+    locationName: string;
+    itemType: string;
+    from: Date;
+    to: Date;
+}
+
+export interface City {
+    id: number;
+    name: string;
+}
+
+export interface Location {
+    id: number;
+    name: string;
+}
+
+export interface ItemType {
+    id: number;
+    name: string;
+}
+
+// Mirrors BookingSystem.Application.Common.PaginatedList<T>
+export interface PaginatedList<T> {
+    items: T[];
+    pageNumber: number;
+    totalPages: number;
+    totalCount: number;
+    hasPreviousPage: boolean;
+    hasNextPage: boolean;
+}
+
+// GET api/items
+export interface GetFilteredItemsResponse {
+    items: PaginatedList<ItemDto>;
+}
+
+export interface ItemDto {
+    id: number;
+    name: string;
+    type: number; // ItemType enum value, matches ItemType.id from api/items/types
+    locationId: number;
+    locationName: string;
+}
+
+// GET api/bookings/item/{itemId}
+export interface GetItemBookingsResponse {
+    bookings: BookingDto[];
+}
+
+export interface BookingDto {
+    from: string; // ISO 8601 date-time
+    to: string;
+    userId: number;
+}
+
+// GET api/bookings/all
+export interface GetUsersBookingsResponse {
+    bookings: BookingInfoDto[];
+}
+
+export interface BookingInfoDto {
+    from: string; // ISO 8601 date-time
+    to: string;
+    locationId: number;
+    locationName: string;
+}
+
+// POST api/bookings
+export interface CreateBookingResponse {
+    id: number;
 }
 
 export type ReadonlyHeaders = VDataTable['$props']['headers'];

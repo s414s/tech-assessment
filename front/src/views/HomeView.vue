@@ -1,8 +1,5 @@
 <script setup lang="ts">
-import { useUserStore } from '@/stores/userStore';
-// import { capitalizeFirstLetter } from '@/helpers/wordUtils';
 
-const { user } = useUserStore();
 </script>
 
 <template>

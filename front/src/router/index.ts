@@ -1,5 +1,5 @@
-import HomeView from '@/views/HomeView.vue';
-import LoginView from '@/views/LoginView.vue';
+import ItemBookingsView from '@/views/ItemBookingsView.vue';
+import UserBookingsView from '@/views/UserBookingsView.vue';
 import { createRouter, createWebHistory } from 'vue-router';
 
 const router = createRouter({
@@ -7,25 +7,13 @@ const router = createRouter({
   routes: [
     {
       path: '/',
-      name: 'home',
-      component: HomeView,
-    },
-    {
-      path: '/login',
-      name: 'login',
-      component: LoginView,
+      name: 'bookings',
+      component: ItemBookingsView,
     },
     {
       path: '/mybookings',
       name: 'mybookings',
-      component: () => import('../views/MyBookingsView.vue'),
-      meta: { requiresAuth: true },
-    },
-    {
-      path: '/bookings/:cityId',
-      name: 'bookings',
-      component: () => import('../views/BookingsView.vue'),
-      meta: { requiresAuth: true },
+      component: UserBookingsView,
     },
   ],
 });
