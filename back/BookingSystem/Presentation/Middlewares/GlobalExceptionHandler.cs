@@ -30,16 +30,18 @@ public class GlobalExceptionHandler : IExceptionHandler
             Extensions = MapExtensions(exception, traceId)
         };
 
-        if (statusCode == StatusCodes.Status500InternalServerError)
-        {
-            _logger.LogError(
-                exception,
-                    "Exception on machine {MachineName}. TraceId: {TraceId}. Msg: {Ex}",
-                    Environment.MachineName,
-                    traceId,
-                    exception.Message);
-        }
+        // Expected business errors are warnings; anything else is an error
+        _logger.Log(
+            statusCode == StatusCodes.Status500InternalServerError ? LogLevel.Error : LogLevel.Warning,
+            exception,
+            "Exception on machine {MachineName} for {Method} {Path}. TraceId: {TraceId}. Msg: {Ex}",
+            Environment.MachineName,
+            httpContext.Request.Method,
+            httpContext.Request.Path,
+            traceId,
+            exception.Message);
 
+        httpContext.Response.StatusCode = statusCode;
         await httpContext.Response.WriteAsJsonAsync(details, cancellationToken);
         return true;
     }
@@ -48,9 +50,7 @@ public class GlobalExceptionHandler : IExceptionHandler
     {
         return exception switch
         {
-            EntityNotFoundException => (StatusCodes.Status400BadRequest, exception.Message),
-            NotImplementedException => (StatusCodes.Status400BadRequest, "Not Implemented"),
-            ArgumentOutOfRangeException => (StatusCodes.Status400BadRequest, exception.Message),
+            DomainException => (StatusCodes.Status400BadRequest, exception.Message),
             _ => (StatusCodes.Status500InternalServerError, "Internal server error")
         };
     }
