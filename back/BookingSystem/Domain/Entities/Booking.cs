@@ -1,33 +1,65 @@
-﻿namespace BookingSystem.Domain.Entities;
+﻿using BookingSystem.Domain.Exceptions;
+
+namespace BookingSystem.Domain.Entities;
 
 public class Booking : Entity
 {
-    private static readonly TimeSpan _stepGap = TimeSpan.FromMinutes(15);
+    public static readonly TimeSpan SlotLength = TimeSpan.FromMinutes(15);
 
     public DateTimeOffset From { get; set; }
     public DateTimeOffset To { get; set; }
+    public long UserId { get; set; }
+    public long ItemId { get; set; }
 
     public virtual User User { get; set; } = null!;
     public virtual Item Item { get; set; } = null!;
 
-    public static Booking Create(DateTimeOffset from, DateTimeOffset to, User madeBy, Item item)
+    // Days and times of day are checked in the location's time zone, whatever offset the caller used
+    public static Booking Create(DateTimeOffset from, DateTimeOffset to, User madeBy, Item item, DateTimeOffset now)
     {
+        from = Location.ToLocal(RoundUpToNextSlotBoundary(from));
+        to = Location.ToLocal(RoundUpToNextSlotBoundary(to));
+
         if (to <= from)
-            throw new ArgumentException("End time must be after start time.");
+            throw new DomainException("End time must be after start time.");
 
-        if (!IsValidTime(from) || !IsValidTime(to))
-            throw new ArgumentException($"Booking times must align with {_stepGap.TotalMinutes}-minute intervals.");
+        var localNow = Location.ToLocal(now);
+        if (from.Date < localNow.Date)
+            throw new DomainException("Bookings cannot be made for past dates.");
 
-        return new Booking()
+        var nextSlot = RoundUpToNextSlotBoundary(localNow);
+        if (from < nextSlot)
+            throw new DomainException($"Bookings must start at {nextSlot:HH:mm} or later.");
+
+        if (from.Date != to.Date)
+            throw new DomainException("Booking must start and end on the same day.");
+
+        if (from.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
+            throw new DomainException("Bookings cannot be made on weekends.");
+
+        var location = item.Location;
+        if (TimeOnly.FromTimeSpan(from.TimeOfDay) < Location.OpeningTime
+            || TimeOnly.FromTimeSpan(to.TimeOfDay) > Location.ClosingTime)
+            throw new DomainException(
+                $"{location.Name} is only open from {Location.OpeningTime:HH:mm} to {Location.ClosingTime:HH:mm}.");
+
+        return new Booking
         {
-            From = from,
-            To = to,
+            // Npgsql only stores UTC (offset 0) values in timestamptz columns
+            From = from.ToUniversalTime(),
+            To = to.ToUniversalTime(),
             User = madeBy,
             Item = item,
         };
     }
 
-    private static bool IsValidTime(DateTimeOffset time) => time.TimeOfDay.Ticks % _stepGap.Ticks == 0;
+    public static DateTimeOffset RoundUpToNextSlotBoundary(DateTimeOffset time)
+    {
+        long ticks = SlotLength.Ticks;
+        long remainder = time.Ticks % ticks;
+
+        return remainder == 0
+            ? time
+            : time.AddTicks(ticks - remainder);
+    }
 }
-
-

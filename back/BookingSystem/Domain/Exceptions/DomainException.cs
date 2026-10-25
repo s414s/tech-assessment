@@ -2,13 +2,14 @@
 
 public class DomainException : Exception
 {
+    public DomainException(string message)
+        : base(message)
+    {
+    }
 
-}
-
-public class EntityNotFoundException : Exception
-{
-    public EntityNotFoundException() : base("Entity could not be found.") { }
-    public EntityNotFoundException(string message) : base(message) { }
-    public EntityNotFoundException(string message, Exception innerException) : base(message, innerException) { }
+    public DomainException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
 }
 
