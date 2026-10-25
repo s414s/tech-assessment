@@ -2,11 +2,17 @@
 
 ## How to run the app
 
+Run
+
 ```
 Docker compose up
 ```
 
-All the necessary migrations and seeders are executed at run time.
+Then visit [local](http://localhost:8080/)
+
+All the necessary migrations and seeders on start
+
+
 
 ## IA Usage
 The project's core structure was built manually, with all architectural decisions made by me as well as the entities and the relation between them on the back and the views with the header on the front.
