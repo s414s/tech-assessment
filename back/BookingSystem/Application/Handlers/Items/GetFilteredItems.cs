@@ -7,18 +7,28 @@ using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.Application.Handlers.Items;
 
-public sealed record GetFilteredItemsQuery(ItemType? Type, long? LocationId, DateOnly? AvailableOnDay, int Page, int Limit);
+public sealed record GetFilteredItemsQuery(
+    ItemType? Type,
+    long? LocationId,
+    DateOnly? AvailableOnDay,
+    int Page,
+    int Limit);
+
 public sealed record GetFilteredItemsResponse(PaginatedList<ItemDto> Items);
+
 public sealed record ItemDto(
     long Id,
     string Name,
     ItemType Type,
     long LocationId,
     string LocationName,
-    TimeOnly OpeningTime,
-    TimeOnly ClosingTime,
     IEnumerable<ItemBookingDto> Bookings);
-public sealed record ItemBookingDto(DateTimeOffset From, DateTimeOffset To, long UserId);
+
+// One slot of the day; UserId is null when the slot is free and set when someone booked it
+public sealed record ItemBookingDto(
+    DateTimeOffset From,
+    DateTimeOffset To,
+    long? UserId);
 
 public class GetFilteredItemsHandler : IHandler<GetFilteredItemsQuery, GetFilteredItemsResponse>
 {
@@ -39,25 +49,31 @@ public class GetFilteredItemsHandler : IHandler<GetFilteredItemsQuery, GetFilter
 
         if (!request.AvailableOnDay.HasValue)
         {
-            var page = await PaginatedList<Item>.CreateAsync(query, request.Page, request.Limit);
-            return new GetFilteredItemsResponse(page.Map(ToDto));
+            // Projected in the database, so only the columns the DTO needs are read
+            var items = query.Select(x => new ItemDto(
+                x.Id,
+                x.Name,
+                x.Type,
+                x.LocationId,
+                x.Location.Name,
+                new List<ItemBookingDto>()));
+
+            return new GetFilteredItemsResponse(await PaginatedList<ItemDto>.CreateAsync(items, request.Page, request.Limit));
         }
 
-        // Free slots depend on opening hours and the current time, so they are worked out in memory
-        // from that day's bookings; the item list is small enough to paginate afterwards
         // The day is a Madrid calendar day; Npgsql needs its bounds in UTC
         var day = request.AvailableOnDay.Value;
-        var dayStart = Location.At(day, TimeOnly.MinValue).ToUniversalTime();
-        var dayEnd = Location.At(day.AddDays(1), TimeOnly.MinValue).ToUniversalTime();
+        var dayStart = Location.FromLocal(day, TimeOnly.MinValue).ToUniversalTime();
+        var dayEnd = Location.FromLocal(day.AddDays(1), TimeOnly.MinValue).ToUniversalTime();
         var now = _timeProvider.GetUtcNow();
 
-        var items = await query
-            .Include(x => x.Bookings.Where(b => b.From < dayEnd && b.To > dayStart).OrderBy(b => b.From))
+        var itemsWithBookings = await query
+            .Include(x => x.Bookings.Where(b => b.From < dayEnd && b.To > dayStart))
             .ToListAsync();
 
-        var available = items
+        var available = itemsWithBookings
             .Where(x => x.HasFreeSlotOn(day, now))
-            .Select(ToDto);
+            .Select(x => ToDto(x, x.GetSlotsOn(day).Select(s => new ItemBookingDto(s.From, s.To, s.UserId))));
 
         return new GetFilteredItemsResponse(PaginatedList<ItemDto>.Create(available, request.Page, request.Limit));
     }
@@ -73,14 +89,12 @@ public class GetFilteredItemsHandler : IHandler<GetFilteredItemsQuery, GetFilter
         return query;
     }
 
-    // Bookings are only loaded when filtering by day, so they are empty otherwise
-    private static ItemDto ToDto(Item item) => new(
+    // Slots are only filled when filtering by day
+    private static ItemDto ToDto(Item item, IEnumerable<ItemBookingDto> slots) => new(
         item.Id,
         item.Name,
         item.Type,
         item.LocationId,
         item.Location.Name,
-        item.Location.OpeningTime,
-        item.Location.ClosingTime,
-        item.Bookings.Select(b => new ItemBookingDto(b.From, b.To, b.UserId)).ToList());
+        slots.ToList());
 }

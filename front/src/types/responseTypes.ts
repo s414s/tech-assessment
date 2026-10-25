@@ -74,15 +74,14 @@ export interface ItemDto {
     type: number; // ItemType enum value, matches ItemType.id from api/items/types
     locationId: number;
     locationName: string;
-    openingTime: string; // HH:mm:ss, location opening time
-    closingTime: string; // HH:mm:ss, location closing time
-    bookings: ItemBookingDto[]; // That day's bookings when filtering by availableOnDate, empty otherwise
+    bookings: ItemBookingDto[]; // That day's slots when filtering by availableOnDate (empty on weekends and otherwise)
 }
 
+// One slot of the day, from the location's opening to its closing time
 export interface ItemBookingDto {
     from: string; // ISO 8601 date-time
     to: string;
-    userId: number;
+    userId: number | null; // null when the slot is free, the booking user when it is taken
 }
 
 // GET api/bookings/item/{itemId}

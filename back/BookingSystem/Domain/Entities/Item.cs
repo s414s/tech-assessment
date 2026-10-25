@@ -1,4 +1,5 @@
 ﻿using BookingSystem.Domain.Enums;
+using BookingSystem.Domain.ValueObjects;
 
 namespace BookingSystem.Domain.Entities;
 
@@ -12,29 +13,34 @@ public class Item : Entity
     public virtual Location Location { get; set; } = null!;
     public virtual ICollection<Booking> Bookings { get; set; } = [];
 
-    // Whether at least one slot on that (Madrid) day can still be booked, following the same rules as Booking.Create:
-    // weekdays only, within the location's opening hours and from the next slot onwards. Needs Location and Bookings loaded.
-    public bool HasFreeSlotOn(DateOnly day, DateTimeOffset now)
+    // The item's slots on that (Madrid) day, from the location's opening to its closing time, each with the user
+    // who booked it (if any). Weekends have no slots. Needs Location and that day's Bookings loaded.
+    public IReadOnlyList<Slot> GetSlotsOn(DateOnly day)
     {
         if (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday)
-            return false;
+            return [];
 
-        var opening = Location.At(day, Location.OpeningTime);
-        var closing = Location.At(day, Location.ClosingTime);
+        var closing = Location.FromLocal(day, Location.ClosingTime);
+        var slots = new List<Slot>();
 
-        var nextSlot = Booking.RoundUp(now.ToUniversalTime());
-        var cursor = nextSlot > opening ? nextSlot : opening;
-
-        // Walk the bookings in order looking for a gap of at least one slot
-        foreach (var booking in Bookings.Where(b => b.From < closing && b.To > cursor).OrderBy(b => b.From))
+        for (var from = Location.FromLocal(day, Location.OpeningTime); from + Booking.SlotLength <= closing; from += Booking.SlotLength)
         {
-            if (booking.From - cursor >= Booking.SlotLength)
-                return true;
+            var to = from + Booking.SlotLength;
+            var booking = Bookings.FirstOrDefault(b => b.From < to && b.To > from);
 
-            if (booking.To > cursor)
-                cursor = booking.To;
+            // Returned in UTC, like the stored bookings
+            slots.Add(new Slot(from.ToUniversalTime(), to.ToUniversalTime(), booking?.UserId));
         }
 
-        return closing - cursor >= Booking.SlotLength;
+        return slots;
+    }
+
+    // Whether at least one slot on that day can still be booked, following the same rules as Booking.Create:
+    // weekdays only, within the location's opening hours and from the next slot onwards
+    public bool HasFreeSlotOn(DateOnly day, DateTimeOffset now)
+    {
+        var nextSlot = Booking.RoundUpToNextSlotBoundary(now.ToUniversalTime());
+
+        return GetSlotsOn(day).Any(x => x.IsFree && x.From >= nextSlot);
     }
 }

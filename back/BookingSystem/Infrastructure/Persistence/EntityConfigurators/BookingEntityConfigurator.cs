@@ -23,7 +23,6 @@ internal class BookingEntityConfigurator : IEntityTypeConfiguration<Booking>
             .HasOne(m => m.User)
             .WithMany(g => g.Bookings)
             .HasForeignKey(m => m.UserId)
-            //.OnDelete(DeleteBehavior.Cascade);
             .IsRequired();
     }
 }

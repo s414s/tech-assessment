@@ -54,7 +54,7 @@ internal static class BookingSeeder
             .Where(x => x.Day.DayOfWeek is not (DayOfWeek.Saturday or DayOfWeek.Sunday))
             .Select(x =>
             {
-                var from = Location.At(x.Day, new TimeOnly(x.seed.Hour, 0));
+                var from = Location.FromLocal(x.Day, new TimeOnly(x.seed.Hour, 0));
                 return new Booking
                 {
                     // Npgsql only stores UTC (offset 0) values in timestamptz columns

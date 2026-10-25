@@ -17,8 +17,8 @@ public class Booking : Entity
     // Days and times of day are checked in the location's time zone, whatever offset the caller used
     public static Booking Create(DateTimeOffset from, DateTimeOffset to, User madeBy, Item item, DateTimeOffset now)
     {
-        from = Location.ToLocal(RoundUp(from));
-        to = Location.ToLocal(RoundUp(to));
+        from = Location.ToLocal(RoundUpToNextSlotBoundary(from));
+        to = Location.ToLocal(RoundUpToNextSlotBoundary(to));
 
         if (to <= from)
             throw new DomainException("End time must be after start time.");
@@ -27,7 +27,7 @@ public class Booking : Entity
         if (from.Date < localNow.Date)
             throw new DomainException("Bookings cannot be made for past dates.");
 
-        var nextSlot = RoundUp(localNow);
+        var nextSlot = RoundUpToNextSlotBoundary(localNow);
         if (from < nextSlot)
             throw new DomainException($"Bookings must start at {nextSlot:HH:mm} or later.");
 
@@ -38,10 +38,10 @@ public class Booking : Entity
             throw new DomainException("Bookings cannot be made on weekends.");
 
         var location = item.Location;
-        if (TimeOnly.FromTimeSpan(from.TimeOfDay) < location.OpeningTime
-            || TimeOnly.FromTimeSpan(to.TimeOfDay) > location.ClosingTime)
+        if (TimeOnly.FromTimeSpan(from.TimeOfDay) < Location.OpeningTime
+            || TimeOnly.FromTimeSpan(to.TimeOfDay) > Location.ClosingTime)
             throw new DomainException(
-                $"{location.Name} is only open from {location.OpeningTime:HH:mm} to {location.ClosingTime:HH:mm}.");
+                $"{location.Name} is only open from {Location.OpeningTime:HH:mm} to {Location.ClosingTime:HH:mm}.");
 
         return new Booking
         {
@@ -53,8 +53,7 @@ public class Booking : Entity
         };
     }
 
-    // Rounds up to the next slot boundary (unchanged when already on one)
-    public static DateTimeOffset RoundUp(DateTimeOffset time)
+    public static DateTimeOffset RoundUpToNextSlotBoundary(DateTimeOffset time)
     {
         long ticks = SlotLength.Ticks;
         long remainder = time.Ticks % ticks;

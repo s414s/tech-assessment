@@ -114,12 +114,7 @@ fetchItems()
           <v-btn color="primary" variant="flat" @click="openBookingDialog(item)">Book</v-btn>
         </v-card-actions>
         <v-card-text>
-          <ItemBookings
-            :date="date"
-            :start-time="item.openingTime"
-            :end-time="item.closingTime"
-            :bookings="item.bookings"
-          />
+          <ItemBookings :slots="item.bookings" />
         </v-card-text>
       </v-card>
     </template>

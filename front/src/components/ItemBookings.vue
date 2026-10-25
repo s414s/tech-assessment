@@ -1,71 +1,37 @@
 
 <script setup lang="ts">
-import { formatTime, toDate, toMinutes } from '@/helpers/dateHelpers';
 import type { ItemBookingDto } from '@/types/responseTypes';
 import { computed, onUnmounted, ref } from 'vue'
 
-interface TimeSlot {
-  start: number
-  end: number
-  label: string
-  occupied: boolean
-  past: boolean
-}
-
+// Slots come already formed from the backend; this only decides how each one looks
 const props = withDefaults(defineProps<{
-  date: string // YYYY-MM-DD
-  startTime: string // HH:mm or HH:mm:ss
-  endTime: string // HH:mm or HH:mm:ss
-  bookings?: ItemBookingDto[]
+  slots?: ItemBookingDto[]
 }>(), {
-  bookings: () => [],
+  slots: () => [],
 })
-
-const STEP = 15
 
 // Refreshed every minute so slots turn unavailable as time passes
 const now = ref(new Date())
 const timer = setInterval(() => (now.value = new Date()), 60_000)
 onUnmounted(() => clearInterval(timer))
 
-const slots = computed<TimeSlot[]>(() => {
-  const start = toMinutes(props.startTime)
-  const end = toMinutes(props.endTime)
-
-  if (end <= start) return []
-
-  const result: TimeSlot[] = []
-
-  for (let minute = start; minute + STEP <= end; minute += STEP) {
-    const slotStart = toDate(minute, props.date)
-    const slotEnd = toDate(minute + STEP, props.date)
-
-    const occupied = props.bookings.some(booking => {
-      const from = new Date(booking.from)
-      const to = new Date(booking.to)
-
-      return from < slotEnd && to > slotStart
-    })
-
-    result.push({
-      start: minute,
-      end: minute + STEP,
-      label: formatTime(minute),
-      occupied,
-      // Bookings can only start from the next slot, so a slot already started is gone too
-      past: slotStart < now.value,
-    })
+const rows = computed(() => props.slots.map(slot => {
+  const from = new Date(slot.from)
+  return {
+    key: slot.from,
+    label: from.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+    occupied: slot.userId !== null,
+    // Bookings can only start from the next slot, so a slot already started is gone too
+    past: from < now.value,
   }
-
-  return result
-})
+}))
 </script>
 
 <template>
   <div class="booking-slots">
     <div
-      v-for="slot in slots"
-      :key="slot.start"
+      v-for="slot in rows"
+      :key="slot.key"
       class="slot"
       :class="{ occupied: slot.occupied, past: slot.past && !slot.occupied }"
     >

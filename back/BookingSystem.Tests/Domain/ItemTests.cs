@@ -8,7 +8,7 @@ public class ItemTests
     private static readonly DateOnly _monday = new(2026, 10, 26);
 
     private static DateTimeOffset Madrid(int hour, int minute, int day = 26) =>
-        Location.At(new DateOnly(2026, 10, day), new TimeOnly(hour, minute));
+        Location.FromLocal(new DateOnly(2026, 10, day), new TimeOnly(hour, minute));
 
     // The previous Friday, so "now" never limits the day unless a test says so
     private static readonly DateTimeOffset _now = Madrid(12, 0, day: 23);
@@ -19,6 +19,45 @@ public class ItemTests
         Location = new Location { Name = "Test location" },
         Bookings = bookings.Select(b => new Booking { From = b.From, To = b.To }).ToList(),
     };
+
+    [Fact]
+    public void GetSlotsOn_CoversOpeningHoursInQuarterSteps()
+    {
+        var slots = ItemWith().GetSlotsOn(_monday);
+
+        Assert.Equal(36, slots.Count); // 09:00-18:00
+        Assert.Equal(Madrid(9, 0), slots[0].From);
+        Assert.Equal(Madrid(9, 15), slots[0].To);
+        Assert.Equal(Madrid(17, 45), slots[^1].From);
+        Assert.Equal(Madrid(18, 0), slots[^1].To);
+        Assert.All(slots, x => Assert.Equal(TimeSpan.Zero, x.From.Offset));
+        Assert.All(slots, x => Assert.True(x.IsFree));
+    }
+
+    [Fact]
+    public void GetSlotsOn_MarksBookedSlotsWithTheirUser()
+    {
+        var item = ItemWith();
+        item.Bookings.Add(new Booking { From = Madrid(10, 0), To = Madrid(10, 30), UserId = 7 });
+
+        var slots = item.GetSlotsOn(_monday);
+
+        var booked = slots.Where(x => !x.IsFree).ToList();
+        Assert.Equal(2, booked.Count);
+        Assert.Equal(Madrid(10, 0), booked[0].From);
+        Assert.Equal(Madrid(10, 15), booked[1].From);
+        Assert.All(booked, x => Assert.Equal(7, x.UserId));
+    }
+
+    [Theory]
+    [InlineData(2026, 10, 24)] // Saturday
+    [InlineData(2026, 10, 25)] // Sunday
+    public void GetSlotsOn_Weekend_ReturnsEmpty(int year, int month, int day)
+    {
+        var date = new DateOnly(year, month, day);
+
+        Assert.Empty(ItemWith().GetSlotsOn(date));
+    }
 
     [Fact]
     public void HasFreeSlotOn_WithoutBookings_IsTrue()

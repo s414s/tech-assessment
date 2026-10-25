@@ -14,8 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
 
-builder.Services.AddHttpContextAccessor();
-
 // Logs every request (verb, full URL, body) and response (status code, body), combined into one entry per request
 builder.Services.AddHttpLogging(options =>
 {
