@@ -47,8 +47,9 @@ public class CreateBookingHandler : IHandler<CreateBookingCommand, CreateBooking
         if (overlaps)
             throw new DomainException("The item is already booked during the requested time.");
 
-        var id = await _bookingsRepository.AddAndSaveChangesAsync(booking);
+        _bookingsRepository.Add(booking);
+        await _bookingsRepository.SaveChangesAsync();
 
-        return new CreateBookingResponse(id);
+        return new CreateBookingResponse(booking.Id);
     }
 }

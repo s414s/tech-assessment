@@ -1,24 +1,23 @@
 ﻿using BookingSystem.Domain.Contracts.Repositories;
 using BookingSystem.Domain.Entities;
 using BookingSystem.Infrastructure.Persistence.Context;
+using Microsoft.EntityFrameworkCore;
 
 namespace BookingSystem.Infrastructure.Persistence.Repositories;
 
-public class Repository<TEntity> : IRepository<TEntity> where TEntity : Entity
+public class Repository<TEntity>(DatabaseContext dbContext) : IRepository<TEntity> where TEntity : Entity
 {
-    protected readonly DatabaseContext _dbContext;
+    protected readonly DatabaseContext _dbContext = dbContext;
+    protected readonly DbSet<TEntity> _set = dbContext.Set<TEntity>();
 
-    public virtual IQueryable<TEntity> Query => _dbContext.Set<TEntity>();
+    public virtual IQueryable<TEntity> Query => _set;
 
-    public Repository(DatabaseContext dbContext)
-    {
-        _dbContext = dbContext;
-    }
+    public virtual void Add(TEntity entity) => _set.Add(entity);
 
-    public virtual async Task<long> AddAndSaveChangesAsync(TEntity entity, CancellationToken cancellationToken = default)
-    {
-        await _dbContext.Set<TEntity>().AddAsync(entity, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-        return entity.Id;
-    }
+    public virtual void Update(TEntity entity) => _set.Update(entity);
+
+    public virtual void Remove(TEntity entity) => _set.Remove(entity);
+
+    public virtual Task<int> SaveChangesAsync(CancellationToken cancellationToken = default)
+        => _dbContext.SaveChangesAsync(cancellationToken);
 }
